@@ -1,0 +1,97 @@
+// i want to control survo motor when the signal through HC-06 is 0 or 1 or 2 or 3
+// but it couldn't do this. I couldn't know the signal was coming right. 
+// How can i solve this? Please Help me sir..
+
+#include <mega128.h>
+#include <Delay.h>
+#include <alcd.h>
+#include <stdio.h>
+
+unsigned char lcd_data[40];  
+unsigned char rdata=0;
+   
+void main(void)
+{
+
+UCSR1A=0x00;                      //초기화
+UCSR1B=0x98;                     //송수신허용,버퍼인터럽트 금지
+UCSR1C=0x06;                    //데이터 전송비트 수 8비트로 설정.
+   
+UBRR1H=0x00;
+UBRR1L=0x67;                     //Baud Rate 9600
+
+DDRD=0x80;
+PORTD=0x00;  
+//DDRC=0x0F; //LED1 테스트 관련 핀
+//PORTC=0x00; //LED2 테스트 관련 핀
+// DDRC=0x0F; //PORTC 0~3번을 입력으로 설정
+//PORTC=0x70; //4~6번 풀업 설정    
+DDRB=0x60;  //모터제어를 위한 방향설정(6번핀:방향설정,5번핀:PWM출력)
+PORTB=0x00; //스텝모터 정지,PWM출력은 0
+
+DDRA=0x00;
+PORTA=0x00;
+
+lcd_init(16);
+                        
+//PB5 PWM 출력모드 설정, timer/counter Fast PWM모드 설정      
+TCCR1A=0x82; //PB5의 출력을 bottom에서 set하고, compare에서 clear하겠다.
+    
+//prescaler(분주비) 및 timer/counter CTC모드로 설정
+TCCR1B=0x1B; //TCCR1A의 WGM의 조합으로 Fast PWM모드로 하고, 분주비 64로 하겠다 
+    
+//타이머 카운터 초기화(TCNT값을 0부터 세겠다.)
+TCNT1H=0x00; //Timer/Counter1의  Counter Register High byte설정
+TCNT1L=0x00; //Timer/Counter1의  Counter Register low byte설정 
+    
+//ICR값이 Fast PWM모드의 TOP 값이 됨
+ICR1H=0x13;//TOP값을 5000으로 하겠다 
+ICR1L=0x87;
+    
+OCR1A=0;                              
+#asm("sei")       
+       
+while(1)
+{       
+if(!(UCSR1A & 0x80)==0)       //1000 0000           문자 수신이 완료될 때까지 대기 UCSR0A의 RXC가 비트1이 되면 다음라인으로
+{
+  
+    rdata=UDR1;
+   
+}
+else rdata=rdata;
+
+
+if(rdata=='0')
+{
+ OCR1A=249; 
+ delay_ms(1000);
+}
+else if(rdata=='1')
+{
+ OCR1A=499;
+ delay_ms(1000);
+}
+
+/*switch(rdata){
+    case '0':  
+        {
+        OCR1A=249;
+        delay_ms(1000); 
+        break;
+        }                                    
+    case '1':   
+        {
+        OCR1A=499;
+        delay_ms(1000);
+        break;
+        }
+                      
+    default :
+    {
+    break;
+    }         
+     }*/
+
+}
+}
